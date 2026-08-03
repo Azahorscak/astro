@@ -17,7 +17,6 @@ package config
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -297,7 +296,7 @@ func getEnv(key string, defaultVal string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
 	}
-	log.Debugf(fmt.Sprintf("Using default value %s for %s", defaultVal, key))
+	log.Debugf("Using default value %s for %s", defaultVal, key)
 	return defaultVal
 }
 
