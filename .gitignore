@@ -11,6 +11,10 @@
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# Coverage artifacts produced by the CI test job
+coverage.txt
+cover-report.html
+
 
 local.sh
 
