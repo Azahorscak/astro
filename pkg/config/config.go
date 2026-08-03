@@ -25,10 +25,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ghodss/yaml"
 	log "github.com/sirupsen/logrus"
 	ddapi "github.com/zorkian/go-datadog-api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 type ruleset struct {

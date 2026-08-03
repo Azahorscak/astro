@@ -1,12 +1,16 @@
 package datadog
 
-// If running mockgen on this package, you will unfortunately need to comment everything out below beforehand
-// and then uncomment again afterwards
+// Regenerate pkg/mocks from the ClientAPI interface in datadog.go with:
+//
+//	mockgen -source=pkg/datadog/datadog.go -package mock_datadog -destination pkg/mocks/datadog_mock.go
+//
+// Source mode parses datadog.go alone, so the import cycle between this
+// package and pkg/mocks does not need to be broken by hand first.
 
 import (
 	"os"
 
-	"github.com/golang/mock/gomock"
+	"go.uber.org/mock/gomock"
 
 	mocks "github.com/fairwindsops/astro/pkg/mocks"
 )
