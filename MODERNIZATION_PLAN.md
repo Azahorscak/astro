@@ -4,6 +4,16 @@
 **Branch:** `claude/review-tests-dependencies-fq0n07`
 **Toolchain used for analysis:** Go 1.24.7 (linux/amd64)
 
+> **Status: phases 1–4 are implemented on this branch.** The Go side of the
+> modernization is complete — every direct dependency is current and the tree is
+> green. Phases 5–7 (CI, E2E, and longer-horizon work) remain open. Part 1 below
+> describes the state *before* those commits and is retained as the rationale.
+>
+> **Phase 5 is now the critical path:** `go.mod` requires Go 1.24, while the
+> CircleCI config and Dockerfile still pin Go 1.14, so they cannot build this
+> branch. They could not build the previous state either — see §1.3 — but the
+> gap is now unambiguous.
+
 ---
 
 ## Executive summary
@@ -295,17 +305,36 @@ require (
 
 | Phase | Scope | Risk | Suggested PR |
 |---|---|---|---|
-| 1 | Non-constant format string fix | none | PR 1 (standalone) |
-| 2 | Go 1.24 + k8s v0.34.1 | low — validated | PR 2 |
-| 3 | mergo / mock / yaml renames | low — validated | PR 2 or 3 |
-| 4 | Remaining direct deps | low | PR 3 |
+| 1 | Non-constant format string fix | none | **done** — `2bf0dba` |
+| 2 | Go 1.24 + k8s v0.34.1 | low — validated | **done** — `2734b5a` |
+| 3 | mergo / mock / yaml renames | low — validated | **done** — `299fa47` |
+| 4 | Remaining direct deps | low | **done** — `427f3f5` |
 | 5 | CI rebuild + Dockerfile + release | medium — needs iteration against real CI | PR 4 |
 | 6 | E2E / kind / Helm 3 | medium–high — effectively a rewrite | PR 5 |
 | 7 | Datadog client, coverage, typed workqueue | high / ongoing | tracked issues |
 
-Phases 1–4 are the dependency refresh proper and are ready to implement
-immediately. **Phase 5 should not be deferred long** — until CI runs, every later
-change is unverified in an environment other than a developer's machine.
+Phases 1–4 are the dependency refresh proper and are now complete. **Phase 5 is
+the critical path** — until CI runs, every change including the four already
+landed is unverified in any environment other than a developer's machine.
+
+### Actual outcome of phases 1–4
+
+Implementation matched the prototype exactly. The only source changes were the
+two lines in Phase 1; the k8s upgrade itself needed none. Final state on branch:
+
+```
+go build ./...          → ok
+go vet ./...            → clean
+gofmt -l .              → clean
+golint -set_exit_status → exit 0
+go test -count=1 ./...  → all 4 packages ok
+go test -race -count=1  → all 4 packages ok
+```
+
+One deviation worth noting: the caveat in `pkg/datadog/test_helpers.go` claiming
+mockgen requires commenting out the file first turned out to be false. `mockgen
+-source` parses `datadog.go` alone, so the import cycle with `pkg/mocks` never
+arises. The comment now records the reproducing command instead.
 
 ## Open items requiring a decision
 
