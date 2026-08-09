@@ -19,7 +19,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/imdario/mergo"
+	"dario.cat/mergo"
 	log "github.com/sirupsen/logrus"
 	ddapi "github.com/zorkian/go-datadog-api"
 

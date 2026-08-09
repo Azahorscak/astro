@@ -17,7 +17,6 @@ package config
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -26,10 +25,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ghodss/yaml"
 	log "github.com/sirupsen/logrus"
 	ddapi "github.com/zorkian/go-datadog-api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 type ruleset struct {
@@ -297,7 +296,7 @@ func getEnv(key string, defaultVal string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
 	}
-	log.Debugf(fmt.Sprintf("Using default value %s for %s", defaultVal, key))
+	log.Debugf("Using default value %s for %s", defaultVal, key)
 	return defaultVal
 }
 
