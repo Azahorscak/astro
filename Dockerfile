@@ -1,4 +1,6 @@
-FROM golang:1.14 AS build
+# Keep this in step with the `go` directive in go.mod -- a builder older than
+# that directive cannot compile the module at all.
+FROM golang:1.25 AS build
 LABEL maintainer="Micah Huber <micah@fairwinds.com>"
 LABEL maintainer="Luke Reed <luke@fairwinds.com>"
 LABEL maintainer="Bader Boland <bader@fairwinds.com>"

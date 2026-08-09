@@ -15,31 +15,45 @@ Astro is built using the [Kubernetes Go client](https://github.com/kubernetes/cl
 We label issues with the ["good first issue" tag](https://github.com/FairwindsOps/astro/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) if we believe they'll be a good starting point for new contributors. If you're interested in working on an issue, please start a conversation on that issue, and we can help answer any questions as they come up.
 
 ## Setting Up Your Development Environment
-### Prerequisites
-* A properly configured Golang environment with Go 1.11 or higher
-* Access to a Kubernetes cluster defined in `~/.kube/config` or `$KUBECONFIG`.
 
-### Installation
-* Install the project with `go get github.com/fairwindsops/astro`
-* Change into the astro directory which is installed at `$GOPATH/src/github.com/fairwindsops/astro`
-* Run the tool with `go run main.go`.
+astro uses a [Flox](https://flox.dev) environment that pins the Go toolchain,
+the linters, and `kubectl` + `kind`. [DEVELOPMENT.md](DEVELOPMENT.md) is the
+full reference; the short version is:
+
+```
+git clone https://github.com/fairwindsops/astro && cd astro
+flox activate
+```
+
+### Prerequisites
+* [Flox](https://flox.dev/docs/install-flox/), which supplies everything else.
+* A container runtime (Docker, OrbStack, Colima, or podman) if you want to use
+  `kind`. Flox cannot ship a runtime daemon.
+* Access to a Kubernetes cluster. `astro-cluster-up` creates a local kind
+  cluster for you; anything in `~/.kube/config` or `$KUBECONFIG` works too.
+
+### Running it
+* `astro-build` builds `bin/astro`, or run it straight from source with
+  `go run main.go`.
+* `astro-demo` creates a kind cluster and installs astro on it. astro stays in
+  dry-run without Datadog credentials, so this needs no Datadog account.
 
 ## Running Tests
 
-The following commands are all required to pass as part of astro testing:
+The following are all required to pass as part of astro testing:
 
 ```
-golint ./...
-go fmt ./...
-go test -v --bench --benchmem ./pkg/...
+astro-lint    # gofmt, go vet, golangci-lint
+astro-test    # go test ./...
 ```
+
+`astro-smoke` additionally verifies a deployment of astro in the kind cluster.
 
 ### Datadog Mocking
 We mock the interface for the Datadog API client library in `./pkg/datadog/datadog.go`.
 If you're adding a new function to the interface there, you'll need to regenerate the
-mocks using
+mocks. `mockgen` comes from the Flox environment, so there is nothing to install:
 ```
-go install github.com/golang/mock/mockgen
 mockgen -source=pkg/datadog/datadog.go -destination=pkg/mocks/datadog_mock.go
 ```
 
