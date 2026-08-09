@@ -16,6 +16,9 @@ coverage.txt
 cover-report.html
 
 
+# Output of hack/dev/build.sh
+/bin/
+
 local.sh
 
 .vscode

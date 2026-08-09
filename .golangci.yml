@@ -1,0 +1,19 @@
+# Configuration for golangci-lint (v2 schema), which replaces the `golint`
+# step in .circleci/config.yml: golint is frozen and deprecated upstream, and
+# installing it with a bare `go get` stopped working in Go 1.22.
+#
+# The enabled set is deliberately small so `hack/dev/lint.sh` is green on the
+# tree as it stands today. Adding errcheck or staticcheck is worthwhile, but
+# each one comes with a batch of pre-existing findings to work through first.
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - ineffassign
+    - unused
+
+formatters:
+  enable:
+    - gofmt

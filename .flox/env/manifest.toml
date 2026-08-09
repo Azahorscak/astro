@@ -1,0 +1,159 @@
+## Flox development environment for astro
+##
+## Everything needed to build, test, lint and run astro against a throwaway
+## Kubernetes cluster lives in here. The only thing Flox cannot provide is a
+## container runtime daemon for kind -- see the on-activate check below.
+##
+## Docs: https://flox.dev/docs/concepts/manifest/
+
+version = 1
+
+
+[install]
+# ---------------------------------------------------------------------------
+# Go toolchain
+# ---------------------------------------------------------------------------
+# go.mod declares `go 1.25.0`, so anything >= 1.25 works. If your catalog does
+# not carry a 1.25.x `go` yet, either drop the version pin or switch the
+# pkg-path to a versioned attribute such as "go_1_25".
+go.pkg-path = "go"
+go.version = "^1.25"
+
+gopls.pkg-path = "gopls"                   # language server
+gotools.pkg-path = "gotools"               # goimports, godoc, stringer, ...
+delve.pkg-path = "delve"                   # dlv debugger
+golangci-lint.pkg-path = "golangci-lint"   # replaces the long-dead golint
+mockgen.pkg-path = "mockgen"               # go.uber.org/mock, regenerates pkg/mocks
+
+# ---------------------------------------------------------------------------
+# Kubernetes / demo environment
+# ---------------------------------------------------------------------------
+kubectl.pkg-path = "kubectl"
+kind.pkg-path = "kind"
+kubernetes-helm.pkg-path = "kubernetes-helm"   # `helm`, for chart-based installs
+
+# ---------------------------------------------------------------------------
+# Shell tooling used by hack/ and e2e/ scripts
+# ---------------------------------------------------------------------------
+jq.pkg-path = "jq"
+yq-go.pkg-path = "yq-go"                   # `yq` v4
+curl.pkg-path = "curl"
+git.pkg-path = "git"
+
+# The docker *daemon* cannot come from Flox, so the client is intentionally not
+# installed here -- it would shadow the CLI that ships with your Docker Desktop
+# / Colima / podman install. Uncomment if you talk to a remote daemon and have
+# no local client:
+# docker-client.pkg-path = "docker-client"
+
+
+[vars]
+# Defaults for the hack/dev scripts. Override any of these in your shell.
+KIND_CLUSTER_NAME = "astro-dev"
+# kind node image for the demo cluster. Keep this in the same ballpark as the
+# k8s.io/client-go version in go.mod (currently v0.34.x).
+KIND_NODE_IMAGE = "kindest/node:v1.34.0"
+ASTRO_IMAGE = "astro:dev"
+ASTRO_NAMESPACE = "astro"
+
+# astro falls back to dry-run when the Datadog keys are empty, so the demo
+# cluster never talks to Datadog. Set DD_API_KEY / DD_APP_KEY and DRY_RUN=false
+# in your own shell if you deliberately want live monitor management.
+DRY_RUN = "true"
+OWNER = "astro-dev"
+DEFINITIONS_PATH = "conf.yml"
+
+
+[hook]
+on-activate = '''
+  # $FLOX_ENV_PROJECT is the directory containing .flox; fall back to $PWD when
+  # the environment is activated in some other way.
+  ASTRO_REPO_ROOT="${FLOX_ENV_PROJECT:-$PWD}"
+  export ASTRO_REPO_ROOT
+
+  _astro_cache="${FLOX_ENV_CACHE:-$ASTRO_REPO_ROOT/.flox/cache}"
+  mkdir -p "$_astro_cache"
+
+  # Keep `go install` output inside the project instead of ~/go/bin.
+  export GOBIN="$_astro_cache/gobin"
+  mkdir -p "$GOBIN"
+
+  # Point kubectl at a project-local kubeconfig so the throwaway kind cluster
+  # never touches ~/.kube/config. Export ASTRO_DEV_SYSTEM_KUBECONFIG=1 before
+  # activating to keep whatever kubeconfig you normally use.
+  if [ "${ASTRO_DEV_SYSTEM_KUBECONFIG:-0}" != "1" ]; then
+    export KUBECONFIG="$_astro_cache/kubeconfig"
+  fi
+
+  PATH="$GOBIN:$ASTRO_REPO_ROOT/hack/dev:$PATH"
+  export PATH
+
+  # kind needs a container runtime daemon, which Flox cannot ship. Detect one
+  # up front so failures happen here rather than three minutes into a build.
+  ASTRO_CONTAINER_RUNTIME=""
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    ASTRO_CONTAINER_RUNTIME="docker"
+  elif command -v podman >/dev/null 2>&1 && podman info >/dev/null 2>&1; then
+    ASTRO_CONTAINER_RUNTIME="podman"
+    export KIND_EXPERIMENTAL_PROVIDER="podman"
+  fi
+  export ASTRO_CONTAINER_RUNTIME
+
+  if [ "${ASTRO_DEV_QUIET:-0}" != "1" ]; then
+    echo "astro dev environment"
+    echo "  go        $(go version 2>/dev/null | cut -d' ' -f3)"
+    echo "  kubectl   $(kubectl version --client -o json 2>/dev/null | jq -r .clientVersion.gitVersion 2>/dev/null)"
+    echo "  kind      $(kind version 2>/dev/null | cut -d' ' -f2)"
+    echo "  KUBECONFIG=${KUBECONFIG:-<system default>}"
+    if [ -z "$ASTRO_CONTAINER_RUNTIME" ]; then
+      echo
+      echo "  WARNING: no running docker or podman daemon found."
+      echo "           kind needs one; everything else works without it."
+    else
+      echo "  runtime   $ASTRO_CONTAINER_RUNTIME"
+    fi
+    echo
+    echo "  astro-build / astro-test / astro-lint   build and check the Go code"
+    echo "  astro-cluster-up / astro-cluster-down   manage the kind demo cluster"
+    echo "  astro-deploy                            build + load + install astro on it"
+    echo "  astro-smoke                             end-to-end check against the cluster"
+    echo "  astro-demo                              cluster-up + deploy + smoke test"
+    echo
+  fi
+'''
+
+
+[profile]
+# Convenience wrappers around hack/dev/*.sh. The scripts are the real interface
+# and work fine outside the Flox environment; these just save typing. Names are
+# prefixed so nothing shadows a shell builtin such as `test`.
+bash = '''
+  alias astro-build='"$ASTRO_REPO_ROOT/hack/dev/build.sh"'
+  alias astro-test='go test ./...'
+  alias astro-lint='"$ASTRO_REPO_ROOT/hack/dev/lint.sh"'
+  alias astro-cluster-up='"$ASTRO_REPO_ROOT/hack/dev/cluster-up.sh"'
+  alias astro-cluster-down='"$ASTRO_REPO_ROOT/hack/dev/cluster-down.sh"'
+  alias astro-deploy='"$ASTRO_REPO_ROOT/hack/dev/deploy.sh"'
+  alias astro-smoke='"$ASTRO_REPO_ROOT/hack/dev/smoke-test.sh"'
+  alias astro-demo='"$ASTRO_REPO_ROOT/hack/dev/demo.sh"'
+'''
+
+zsh = '''
+  alias astro-build='"$ASTRO_REPO_ROOT/hack/dev/build.sh"'
+  alias astro-test='go test ./...'
+  alias astro-lint='"$ASTRO_REPO_ROOT/hack/dev/lint.sh"'
+  alias astro-cluster-up='"$ASTRO_REPO_ROOT/hack/dev/cluster-up.sh"'
+  alias astro-cluster-down='"$ASTRO_REPO_ROOT/hack/dev/cluster-down.sh"'
+  alias astro-deploy='"$ASTRO_REPO_ROOT/hack/dev/deploy.sh"'
+  alias astro-smoke='"$ASTRO_REPO_ROOT/hack/dev/smoke-test.sh"'
+  alias astro-demo='"$ASTRO_REPO_ROOT/hack/dev/demo.sh"'
+'''
+
+
+[options]
+systems = [
+  "x86_64-linux",
+  "aarch64-linux",
+  "x86_64-darwin",
+  "aarch64-darwin",
+]

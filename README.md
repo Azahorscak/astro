@@ -148,6 +148,10 @@ Templating in the override is currently not available.
 PRs welcome! Check out the [Contributing Guidelines](CONTRIBUTING.md),
 [Code of Conduct](CODE_OF_CONDUCT.md), and [Roadmap](ROADMAP.md) for more information.
 
+[DEVELOPMENT.md](DEVELOPMENT.md) covers the [Flox](https://flox.dev) development
+environment. `flox activate && astro-demo` gets you a build, a kind cluster, and
+astro running against it -- no Datadog account and no other tooling required.
+
 ## Further Information
 A history of changes to this project can be viewed in the [Changelog](CHANGELOG.md)
 
